@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "clean": "rm -rf node_modules package-lock.json .next && npm cache clean --force",
+    "reinstall": "npm run clean && npm install --legacy-peer-deps",
+    "rebuild": "npm run reinstall && npm run build"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",

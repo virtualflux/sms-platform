@@ -1,7 +1,6 @@
 "use client"
 
-import { useForm, Controller, SubmitHandler } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm, SubmitHandler } from "react-hook-form"
 import * as z from "zod"
 import { format } from "date-fns"
 import { CalendarIcon } from "lucide-react"
@@ -69,7 +68,6 @@ export default function SendSMSForm() {
 
   const onSubmit: SubmitHandler<FormData> = (data) => {
     console.log("Sending SMS:", data)
-    // you can handle actual send/schedule here
   }
 
   const handleTemplateChange = (templateId: string) => {

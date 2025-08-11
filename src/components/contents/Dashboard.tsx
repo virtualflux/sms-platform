@@ -5,12 +5,11 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import {
-    BarChart as ChartIcon,
     CheckCircle2,
     Clock3,
     XCircle,
     Send,
-    Wallet, ArrowDownCircle, ArrowUpCircle
+    Wallet,
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
