@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { useState } from 'react'
+import { apiFetch } from '@/lib/api/client'
+import { Alert } from '@/components/ui/alert'
 
 type FormValues = {
-    currentPassword: string
+    oldPassword: string
     newPassword: string
     confirmPassword: string
 }
@@ -19,20 +21,42 @@ export default function ChangePassword() {
         handleSubmit,
         watch,
         formState: { errors, isSubmitting },
+        reset
     } = useForm<FormValues>()
+    const [pending, setPending] = useState(false)
 
-    const [success, setSuccess] = useState(false)
 
-    const onSubmit = async (data: FormValues) => {
-        if (data.newPassword !== data.confirmPassword) return
-
+    const onSubmit = async (data: FormValues)  => {
         try {
-            // TODO: send request to backend to change password
-            console.log('Changing password...', data)
-
-            setSuccess(true)
-        } catch (err) {
-            console.error(err)
+            const response = await apiFetch(
+                '/auth/change-password',
+                'POST',
+                {...data, confirmPassword: undefined}
+            )
+            if(response?.success){
+                Alert({
+                    title: 'Success',
+                    icon: 'success',
+                    text: response?.message,
+                    darkMode: true
+                });
+                reset()
+            }else{
+                Alert({
+                    title: 'Error',
+                    icon: 'error',
+                    text: response?.message,
+                    darkMode: true
+                });
+            }
+        } catch (error) {
+            console.log(error)
+            Alert({
+                title: 'Error',
+                icon: 'error',
+                text: 'Something went wrong',
+                darkMode: true
+            });
         }
     }
 
@@ -45,30 +69,45 @@ export default function ChangePassword() {
             <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <div>
-                <Label htmlFor="currentPassword">Current Password</Label>
+                <Label htmlFor="oldPassword">Current Password</Label>
                 <Input
                     type="password"
-                    id="currentPassword"
-                    {...register('currentPassword', { required: 'Current password is required' })}
+                    id="oldPassword"
+                    {...register('oldPassword', { required: 'Current password is required' })}
                 />
-                {errors.currentPassword && (
-                    <p className="text-sm text-red-500">{errors.currentPassword.message}</p>
+                {errors.oldPassword && (
+                    <p className="text-sm text-red-500">{errors.oldPassword.message}</p>
                 )}
                 </div>
 
                 <div>
-                <Label htmlFor="newPassword">New Password</Label>
-                <Input
-                    type="password"
-                    id="newPassword"
-                    {...register('newPassword', {
-                    required: 'New password is required',
-                    minLength: { value: 6, message: 'Password must be at least 6 characters' },
-                    })}
-                />
-                {errors.newPassword && (
-                    <p className="text-sm text-red-500">{errors.newPassword.message}</p>
-                )}
+                    <Label htmlFor="newPassword">New Password</Label>
+                    <Input
+                        type="password"
+                        id="newPassword"
+                        {...register('newPassword', {
+                        required: 'New password is required',
+                        minLength: {
+                            value: 8,
+                            message: 'Password must be at least 8 characters long',
+                        },
+                        validate: {
+                            hasUppercase: (value) =>
+                            /[A-Z]/.test(value) || 'Password must contain at least one uppercase letter',
+                            hasLowercase: (value) =>
+                            /[a-z]/.test(value) || 'Password must contain at least one lowercase letter',
+                            hasNumber: (value) =>
+                            /[0-9]/.test(value) || 'Password must contain at least one number',
+                            hasSpecialChar: (value) =>
+                            /[@$!%*?&#]/.test(value) ||
+                            'Password must contain at least one special character',
+                        },
+                        })}
+                    />
+
+                    {errors.newPassword && (
+                        <p className="text-sm text-red-500">{errors.newPassword.message}</p>
+                    )}
                 </div>
 
                 <div>
@@ -90,10 +129,6 @@ export default function ChangePassword() {
                 <Button type="submit" disabled={isSubmitting} className="w-full">
                 {isSubmitting ? 'Saving...' : 'Change Password'}
                 </Button>
-
-                {success && (
-                <p className="text-sm text-green-600 pt-2">Password changed successfully!</p>
-                )}
             </form>
             </CardContent>
         </Card>

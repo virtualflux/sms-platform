@@ -1,76 +1,125 @@
 'use client';
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { CalendarIcon, DownloadIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import Loader from "../ui/Loader";
+import { Alert } from "../ui/alert";
+import { apiFetch } from "@/lib/api/client";
+import { AdvancedFilter } from "../AdvanceFilter";
+import { Pagination } from "../Pagination";
+import moment from "moment";
 
 type WalletTransaction = {
   id: string;
   amount: number;
-  status: "success" | "pending" | "failed";
-  description: string;
-  date: Date;
+  status: "SUCCESS" | "PENDING" | "FAILED";
+  type: "CREDIT" | "DEBIT" | "TOPUP";
+  reference: string;
+  createdAt: string;
+  
 };
 
-const mockWalletData: WalletTransaction[] = [
-  {
-    id: "TXN001",
-    amount: 1000,
-    status: "success",
-    description: "Wallet funding of 1000",
-    date: new Date("2025-07-01"),
-  },
-  {
-    id: "TXN002",
-    amount: 500,
-    status: "success",
-    description: "Wallet funding of 500",
-    date: new Date("2025-07-15"),
-  },
-  {
-    id: "TXN003",
-    amount: 300,
-    status: "pending",
-    description: "Wallet funding of 300",
-    date: new Date("2025-07-25"),
-  },
-];
 
 export default function WalletHistory() {
-  const [fromDate, setFromDate] = useState<Date | undefined>();
-  const [toDate, setToDate] = useState<Date | undefined>();
+  const [data, setData] = useState<WalletTransaction[]>([])
+  const [query, setQuery] = useState<any>({}); 
+  const [page, setPage] = useState(1);  
+  const [totalPages, setTotalPages] = useState(1)
+  const [loading, setLoading] = useState(true)
+  const [loaded, setLoaded] = useState(false)
 
-  const filteredData = mockWalletData.filter((txn) => {
-    const inDateRange =
-      (!fromDate || txn.date >= fromDate) && (!toDate || txn.date <= toDate);
-    return inDateRange;
-  });
+  useEffect(()=>{
+    handleFetch()
+  },[])
 
-  const exportCSV = () => {
-    const headers = ["Transaction ID", "Amount", "Type", "Status", "Description", "Date"];
-    const rows = filteredData.map((txn) => [
-      txn.id,
-      txn.amount,
-      txn.status,
-      txn.description,
-      format(txn.date, "yyyy-MM-dd"),
-    ]);
-    const csvContent = [headers, ...rows].map((row) => row.join(",")).join("\n");
+  const handleFetch = async (filterQuery = {}, pageNumber = page, load = true) =>{
+      if(load)setLoading(true)
+      try {
+        const queryString = new URLSearchParams(
+          Object.fromEntries(
+            Object.entries({
+              ...filterQuery,
+              page: pageNumber,
+            }).map(([key, val]) => [key, String(val)])
+          )
+        ).toString();
+        const response = await apiFetch(`/transaction?${queryString}`);
+  
+        if(response?.success){
+          setData(response?.data?.data);
+          setTotalPages(response?.data?.totalPages)
+          setPage(response?.data?.page)
+        }else{
+          Alert({
+            title: 'Error',
+            icon: 'error',
+            text: response?.message,
+            darkMode: true
+          });
+        }
+  
+      } catch (error) {
+        console.log(error);
+        Alert({
+          title: 'Error',
+          icon: 'error',
+          text: "Something went wrong!",
+          darkMode: true
+        });
+      }finally{
+        setLoading(false)
+        setLoaded(true)
+      }
+    };
+  
+    const handleFilter = (values:any) => {
+      const formatted: any = {};
+      if(values.recipient) formatted.recipient = values.recipient;
+      if(values.status) formatted.status = values.status;
+  
+      if(values.date?.from && values.date?.to){
+        formatted.from = values.date.from;
+        formatted.to = values.date.to;
+      }
+  
+      setQuery(formatted);
+      setPage(1);
+      handleFetch(formatted, 1, false);
+    };
+  
+    const handlePageChange = (newPage:number) => {
+      setPage(newPage);
+      handleFetch(query, newPage);
+    };
+  
+    const exportCSV = () => {
+      const headers = ["Transaction ID", "Amount", "Type", "Status", "Reference", "Date"];
+      const rows = data.map((txn) => [
+        txn.id,
+        txn.amount,
+        txn.type,
+        txn.status,
+        txn.reference,
+        moment(txn.createdAt).format("yyyy-MM-dd"),
+      ]);
+      const csvContent = [headers, ...rows].map((row) => row.join(",")).join("\n");
+  
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute("download", `wallet_history_${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.setAttribute("download", `wallet_history_${Date.now()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+    if(loading && !loaded) return <Loader/>
+
 
   return (
     <div className="p-6 space-y-6">
@@ -83,44 +132,20 @@ export default function WalletHistory() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {/* From Date */}
-        <div>
-          <label className="text-sm font-medium">From Date</label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant={"outline"}
-                className={cn("w-full justify-start text-left font-normal", !fromDate && "text-muted-foreground")}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {fromDate ? format(fromDate, "PPP") : "Select date"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar mode="single" selected={fromDate} onSelect={setFromDate} />
-            </PopoverContent>
-          </Popover>
-        </div>
-
-        {/* To Date */}
-        <div>
-          <label className="text-sm font-medium">To Date</label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant={"outline"}
-                className={cn("w-full justify-start text-left font-normal", !toDate && "text-muted-foreground")}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {toDate ? format(toDate, "PPP") : "Select date"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar mode="single" selected={toDate} onSelect={setToDate} />
-            </PopoverContent>
-          </Popover>
-        </div>
+      <div>
+        <AdvancedFilter
+          title="Trannsaction History Filter"
+          onApply={handleFilter}
+          fields={[
+            {type:"text", name:"reference", label:"Search"},
+            {type:"select", name:"status", label:"Status", options:[
+              {label:"Pending", value:"PENDING"},
+              {label:"Success", value:"SUCCESS"},
+              {label:"Failed", value:"FAILED"},
+            ]},
+            {type:"dateRange", name:"date", label:"Date Range"},
+          ]}
+        />
       </div>
 
       {/* Table */}
@@ -131,19 +156,21 @@ export default function WalletHistory() {
               <TableHead>Transaction ID</TableHead>
               <TableHead>Amount (₦)</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Description</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Reference</TableHead>
               <TableHead>Date</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredData.length > 0 ? (
-              filteredData.map((txn) => (
+            {data.length > 0 ? (
+              data.map((txn) => (
                 <TableRow key={txn.id}>
-                  <TableCell>{txn.id}</TableCell>
-                  <TableCell>{txn.amount.toLocaleString()}</TableCell>
+                  <TableCell className="uppercase">{txn?.id?.slice(0,9)}</TableCell>
+                  <TableCell>₦{txn.amount.toLocaleString()}</TableCell>
                   <TableCell className="capitalize">{txn.status}</TableCell>
-                  <TableCell>{txn.description}</TableCell>
-                  <TableCell>{format(txn.date, "PPP")}</TableCell>
+                  <TableCell className="capitalize">{txn.type}</TableCell>
+                  <TableCell>{txn.reference}</TableCell>
+                  <TableCell>{moment(txn.createdAt).format("DD MMM, YYYY")}</TableCell>
                 </TableRow>
               ))
             ) : (
@@ -156,6 +183,12 @@ export default function WalletHistory() {
           </TableBody>
         </Table>
       </div>
+
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        onChange={(p) => handlePageChange(p)}
+      />
     </div>
   );
 }

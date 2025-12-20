@@ -5,16 +5,21 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { apiFetch } from '@/lib/api/client'
+import { Alert } from '@/components/ui/alert'
+import { useAppDispatch, useAppSelector } from '@/store/hooks'
+import { setCredentials } from '@/store/slices/authSlice'
 
 type FormValues = {
-  fullName: string
+  name: string
   email: string
   phone: string
-  organization?: string
+  // organization?: string
 }
 
 export default function UpdateProfile() {
+  const {user} = useAppSelector((state)=>state.auth)
   const {
     register,
     handleSubmit,
@@ -22,25 +27,60 @@ export default function UpdateProfile() {
     reset,
   } = useForm<FormValues>({
     defaultValues: {
-      fullName: '',
-      email: '',
-      phone: '',
-      organization: '',
+      name: user?.name ?? '',
+      email: user?.email ?? '',
+      phone: user?.phone ?? '',
     },
   })
+  const dispatch = useAppDispatch()
 
-  const [success, setSuccess] = useState(false)
+  useEffect(() => {
+    if (user) {
+      reset({
+        name: user.name ?? '',
+        email: user.email ?? '',
+        phone: user.phone ?? '',
+      });
+    }
+  }, [user, reset]);
 
   const onSubmit = async (data: FormValues) => {
     try {
-      console.log('Updating profile with:', data)
-
-      // TODO: Send API request to update profile
-
-      setSuccess(true)
-      setTimeout(() => setSuccess(false), 4000)
-    } catch (err) {
-      console.error('Profile update failed:', err)
+      const response = await apiFetch(
+          '/auth/profile',
+          'PUT',
+          data
+      )
+      if(response?.success){
+          Alert({
+            title: 'Success',
+            icon: 'success',
+            text: response?.message,
+            darkMode: true
+          });
+          dispatch(
+            setCredentials({
+              user: response?.data?.user,
+              accessToken: response?.data?.tokens?.accessToken,
+              refreshToken: response?.data?.tokens?.refreshToken,
+            })
+          )
+      }else{
+          Alert({
+            title: 'Error',
+            icon: 'error',
+            text: response?.message,
+            darkMode: true
+          });
+      }
+    } catch (error) {
+        console.log(error)
+        Alert({
+          title: 'Error',
+          icon: 'error',
+          text: 'Something went wrong',
+          darkMode: true
+        });
     }
   }
 
@@ -53,12 +93,12 @@ export default function UpdateProfile() {
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
-              <Label htmlFor="fullName">Full Name</Label>
+              <Label htmlFor="name">Full Name</Label>
               <Input
-                id="fullName"
-                {...register('fullName', { required: 'Full name is required' })}
+                id="name"
+                {...register('name')}
               />
-              {errors.fullName && <p className="text-sm text-red-500">{errors.fullName.message}</p>}
+              {errors.name && <p className="text-sm text-red-500">{errors.name.message}</p>}
             </div>
 
             <div>
@@ -67,7 +107,7 @@ export default function UpdateProfile() {
                 id="email"
                 type="email"
                 {...register('email', {
-                  required: 'Email is required',
+                  // required: 'Email is required',
                   pattern: {
                     value: /^\S+@\S+$/i,
                     message: 'Invalid email format',
@@ -82,21 +122,20 @@ export default function UpdateProfile() {
               <Input
                 id="phone"
                 type="tel"
-                {...register('phone', { required: 'Phone number is required' })}
+                {...register('phone')}
               />
               {errors.phone && <p className="text-sm text-red-500">{errors.phone.message}</p>}
             </div>
 
-            <div>
+            {/* <div>
               <Label htmlFor="organization">Organization (optional)</Label>
               <Input id="organization" {...register('organization')} />
-            </div>
+            </div> */}
 
             <Button type="submit" disabled={isSubmitting} className="w-full">
               {isSubmitting ? 'Updating...' : 'Update Profile'}
             </Button>
 
-            {success && <p className="text-green-600 text-sm pt-2">Profile updated successfully!</p>}
           </form>
         </CardContent>
       </Card>

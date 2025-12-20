@@ -20,7 +20,9 @@ import {
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useForm } from "react-hook-form";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { apiFetch } from "@/lib/api/client";
+import { Alert } from "../ui/alert";
 
 type FormData = {
   threshold: string;
@@ -32,22 +34,16 @@ type FormData = {
 type Reminder = {
   id: string;
   threshold: string;
-  email: string;
-  phone: string;
+  emails: string;
+  phones: string;
   interval: string;
+  createdAt: string;
 };
 
 const LowBalanceReminder = () => {
-  const [reminders, setReminders] = useState<Reminder[]>([
-    {
-      id: "1",
-      threshold: "1000",
-      email: "admin@example.com, finance@example.com",
-      phone: "08012345678, 08098765432",
-      interval: "daily",
-    },
-  ]);
-
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [loading, setLoading] = useState(false)
+  const [pending, setPending] = useState(false)
   const {
     register,
     handleSubmit,
@@ -64,17 +60,98 @@ const LowBalanceReminder = () => {
     },
   });
 
-  const onSubmit = (data: FormData) => {
-    const newReminder: Reminder = {
-      id: Date.now().toString(),
-      ...data,
-    };
-    setReminders((prev) => [...prev, newReminder]);
-    reset();
+  useEffect(()=>{
+    handleFetch()
+  },[])
+
+  const handleFetch = async () => {
+    try {
+      const response = await apiFetch(
+        '/balance-reminder'
+      )
+      if(response?.success){
+        setReminders(response?.data)
+      }
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  const onSubmit = async (data: FormData) => {
+    setLoading(true)
+    try {
+      const response = await apiFetch(
+        '/balance-reminder',
+        'POST',
+        {
+          ...data,
+          threshold: Number(data.threshold)
+        }
+      )
+      if(response?.success){
+        handleFetch()
+        reset();
+        Alert({
+          title: 'Success',
+          icon: 'success',
+          text: response?.message,
+          darkMode: true
+        });
+      }else{
+        Alert({
+          title: 'Error',
+          icon: 'error',
+          text: response?.message,
+          darkMode: true
+        });
+      }
+    } catch (error) {
+      console.log(error)
+      Alert({
+        title: 'Error',
+        icon: 'error',
+        text: "Something went wrong",
+        darkMode: true
+      });
+    }finally{
+      setLoading(false)
+    }
   };
 
-  const deleteReminder = (id: string) => {
-    setReminders((prev) => prev.filter((r) => r.id !== id));
+  const deleteReminder = async (id: string) => {
+    setPending(true)
+    try {
+      const response = await apiFetch(
+        `/balance-reminder?id=${id}`,
+        'DELETE',
+      )
+      if(response?.success){
+        handleFetch()
+        Alert({
+          title: 'Success',
+          icon: 'success',
+          text: response?.message,
+          darkMode: true
+        });
+      }else{
+        Alert({
+          title: 'Error',
+          icon: 'error',
+          text: response?.message,
+          darkMode: true
+        });
+      }
+    } catch (error) {
+      console.log(error)
+      Alert({
+        title: 'Error',
+        icon: 'error',
+        text: "Something went wrong",
+        darkMode: true
+      });
+    }finally{
+      setPending(false)
+    }
   };
 
   return (
@@ -91,6 +168,7 @@ const LowBalanceReminder = () => {
                 <Input
                     id="threshold"
                     type="number"
+                    min={100}
                     placeholder="e.g. 1000"
                     {...register("threshold", { required: "Threshold is required" })}
                 />
@@ -136,10 +214,10 @@ const LowBalanceReminder = () => {
                     <SelectValue placeholder="Select interval" />
                     </SelectTrigger>
                     <SelectContent>
-                    <SelectItem value="hourly">Hourly</SelectItem>
-                    <SelectItem value="6hours">Every 6 Hours</SelectItem>
-                    <SelectItem value="12hours">Every 12 Hours</SelectItem>
-                    <SelectItem value="daily">Daily</SelectItem>
+                    <SelectItem value="HOURLY">Hourly</SelectItem>
+                    <SelectItem value="ONCE">Once</SelectItem>
+                    <SelectItem value="DAILY">Daily</SelectItem>
+                    <SelectItem value="WEEKLY">Weekly</SelectItem>
                     </SelectContent>
                 </Select>
                 <p className="text-sm text-muted-foreground">
@@ -147,7 +225,8 @@ const LowBalanceReminder = () => {
                 </p>
                 </div>
 
-                <Button type="submit">Save Reminder Settings</Button>
+                <Button type="submit"
+                disabled={loading}>{loading ? "Loading...." : "Save Reminder Settings"}</Button>
             </form>
             </CardContent>
         </Card>
@@ -175,16 +254,17 @@ const LowBalanceReminder = () => {
                     {reminders.map((reminder) => (
                     <TableRow key={reminder.id}>
                         <TableCell>₦{reminder.threshold}</TableCell>
-                        <TableCell>{reminder.email || "-"}</TableCell>
-                        <TableCell>{reminder.phone || "-"}</TableCell>
+                        <TableCell>{reminder.emails || "-"}</TableCell>
+                        <TableCell>{reminder.phones || "-"}</TableCell>
                         <TableCell>{reminder.interval}</TableCell>
                         <TableCell className="text-right">
                         <Button
                             size="sm"
                             variant="outline"
+                            disabled={pending}
                             onClick={() => deleteReminder(reminder.id)}
                         >
-                            Delete
+                            {pending ? "Loading..." : "Delete"}
                         </Button>
                         </TableCell>
                     </TableRow>

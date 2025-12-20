@@ -41,7 +41,7 @@ export function Features() {
     ];
   
     return (
-      <section className="bg-background py-20 px-6 md:px-12 lg:px-24">
+      <section id="features" className="bg-background py-20 px-6 md:px-12 lg:px-24">
         <div className="max-w-6xl mx-auto text-center">
           <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-6">
             Powerful SMS Features at Your Fingertips

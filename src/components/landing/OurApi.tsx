@@ -49,7 +49,8 @@ export function ApiDocumentation() {
 
         <div className="mt-10">
           <Button size="lg" className="text-base" asChild>
-            <a href="/docs/api" target="_blank" rel="noopener noreferrer">
+            <a href="https://documenter.getpostman.com/view/34752920/2sB3dTrnW3" 
+            target="_blank" rel="noopener noreferrer">
               View API Documentation <ArrowRight className="ml-2 w-4 h-4" />
             </a>
           </Button>

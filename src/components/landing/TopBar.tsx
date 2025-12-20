@@ -5,10 +5,12 @@ import { useState } from "react"
 import { useTheme } from "next-themes"
 import { Menu, X, Moon, Sun } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useAppSelector } from "@/store/hooks"
 
 export function Topbar() {
   const [isOpen, setIsOpen] = useState(false)
   const { theme, setTheme } = useTheme()
+  const {user} = useAppSelector((state) =>state.auth)
 
   const toggleTheme = () => {
     setTheme(theme === "light" ? "dark" : "light")
@@ -30,7 +32,7 @@ export function Topbar() {
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
             {/* Logo/Brand */}
             <Link href="/" className="text-lg font-bold text-foreground">
-                SMSPlatform
+                VFluxSMS
             </Link>
 
             {/* Desktop nav */}
@@ -45,12 +47,24 @@ export function Topbar() {
                     >
                         {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
                     </Button>
-                    <Button variant="outline" asChild>
-                        <Link href="/auth/accounts/login">Login</Link>
-                    </Button>
-                    <Button asChild>
-                        <Link href="/auth/accounts/signup">Sign Up</Link>
-                    </Button>
+                    {
+                      user?.name ? (
+                        <Button variant="outline" asChild>
+                          <Link href="/dashboard">
+                            Dashboard
+                          </Link>
+                        </Button>
+                      ) : (
+                        <>
+                        <Button variant="outline" asChild>
+                          <Link href="/auth/login">Login</Link>
+                        </Button>
+                        <Button asChild>
+                          <Link href="/auth/signup">Sign Up</Link>
+                        </Button>
+                        </>
+                      )
+                    }
                 </div>
             </nav>
 
@@ -80,12 +94,24 @@ export function Topbar() {
         <div className="md:hidden bg-background border-t border-border px-4 pb-4">
           {navLinks}
           <div className="mt-4 flex flex-col gap-3">
-            <Button variant="outline" asChild>
-              <Link href="/auth/login">Login</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/auth/signup">Sign Up</Link>
-            </Button>
+            {
+              user?.name ? (
+                <Button variant="outline" asChild>
+                  <Link href="/dashboard">
+                    Dashboard
+                  </Link>
+                </Button>
+              ) : (
+                <>
+                <Button variant="outline" asChild>
+                  <Link href="/auth/login">Login</Link>
+                </Button>
+                <Button asChild>
+                  <Link href="/auth/signup">Sign Up</Link>
+                </Button>
+                </>
+              )
+            }
           </div>
         </div>
       )}

@@ -7,6 +7,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { useAppDispatch } from "@/store/hooks";
+import { logout } from "@/store/slices/authSlice";
 
 const links = [
   { label: "Dashboard", href: "/dashboard" },
@@ -38,6 +40,7 @@ const links = [
 
 export default function Sidebar() {
     const pathname = usePathname();
+    const dispatch = useAppDispatch()
 
     const isActive = (href: string) => {
         if (href === '/dashboard') {
@@ -49,6 +52,10 @@ export default function Sidebar() {
     const defaultOpenMenus = links
     .filter((link) => link.submenu?.some((sublink) => pathname.startsWith(sublink.href)))
     .map((link) => link.label);
+
+     const handleLogout = ()=>{
+        dispatch(logout())
+    }
 
   return (
     <>
@@ -94,7 +101,9 @@ export default function Sidebar() {
           </Accordion>
         </nav>
 
-        <Button variant="destructive" size="lg" className="mt-20 w-full cursor-pointer">
+        <Button onClick={handleLogout}
+        variant="destructive" size="lg" 
+        className="mt-20 w-full cursor-pointer">
           Logout
         </Button>
       </aside>
@@ -107,7 +116,7 @@ export default function Sidebar() {
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-8">
+          <SheetContent side="left" className="p-8 z-[10000]">
             <h2 className="text-lg font-semibold mb-4">SMS Dashboard</h2>
             <nav className="space-y-2 z-[1000]">
               <Accordion type="multiple" className="w-full" defaultValue={defaultOpenMenus}>

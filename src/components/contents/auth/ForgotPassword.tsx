@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { apiFetch } from '@/lib/api/client';
+import { Alert } from '@/components/ui/alert';
 
 type ForgotPasswordFormInputs = {
   email: string;
@@ -17,16 +19,37 @@ export default function ForgotPassword() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
+    reset
   } = useForm<ForgotPasswordFormInputs>();
   const router = useRouter()
 
   const onSubmit: SubmitHandler<ForgotPasswordFormInputs> = async (data) => {
     try {
-      console.log('Sending reset link to:', data.email);
-      router.push('/auth/recovery/reset-password')
-      // Send email to backend to trigger reset password process
+      const response = await apiFetch('/auth/forgot-password', 'POST', data);
+      if (response?.success) {
+        Alert({
+          title: 'Verification complete',
+          icon: 'success',
+          text: response?.message,
+          darkMode: true
+        });
+        reset()
+      } else {
+        Alert({
+          title: 'Verification Failed',
+          icon: 'error',
+          text: response?.message || 'Invalid credentials',
+          darkMode: true
+        });
+      }
     } catch (error) {
-      console.error('Error sending reset link:', error);
+      console.error(error);
+      Alert({
+        title: 'Error',
+        icon: 'error',
+        text: 'Something went wrong',
+        darkMode: true
+      });
     }
   };
 
