@@ -14,7 +14,8 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Log in to Docker Hub
-        run: echo "dckr_pat_URockxw0LZZX0NzkgMkCxacE9Kc" | docker login -u "virtualflux" --password-stdin
+        run: |
+          echo "${{ secrets.DOCKERHUBPASSWORD }}" | docker login -u "${{ secrets.DOCKERHUBID }}" --password-stdin
 
       - name: Build Docker Image
         run: docker build . -t virtualflux/sms-platform:${{ github.ref_name }}
